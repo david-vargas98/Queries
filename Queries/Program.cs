@@ -10,27 +10,36 @@ namespace Queries
         {
             var context = new PlutoContext();
 
-            // LINQ syntax
-            Console.WriteLine("\tUsing LINQ Syntax:");
-            var coursesLINQ = from c in context.Courses
-                        where c.Name.Contains("C#")
-                        orderby c.Name
-                        select c;
-            // iterate through the results
-            foreach(var course in coursesLINQ)
+            // Restriction: Filtering data
+            var coursesLevOne = from c in context.Courses
+                                where c.Level == 1 && c.Author.Id == 1 // restriction by level and author
+                                select c;
+            // Ordering: Sorting data by their level
+            var coursesLevOrd = from c in context.Courses
+                                where c.Author.Id == 1
+                                orderby c.Level descending, c.Name // ordering by level descending and then by name
+                                select c;
+            // Projection: Selecting specific fields
+            var coursesProj = from c in context.Courses
+                              where c.Author.Id == 1
+                              orderby c.Level, c.Name
+                              select new
+                              {
+                                  Name = c.Name,
+                                  Author = c.Author.Name
+                              };
+            // Grouping: Grouping courses by their level without using aggregation
+            var coursesGrouped = from c in context.Courses
+                               group c by c.Level
+                               into g
+                               select g;
+            foreach(var group in coursesGrouped)
             {
-                Console.WriteLine(course.Name);
-            }
-
-            // Extension method syntax
-            Console.WriteLine("\tUsing Method Sintax:");
-            var coursesExt = context.Courses
-                .Where(c => c.Name.Contains("C#"))
-                .OrderBy(c => c.Name);
-            // iterate through the results
-            foreach(var course in coursesExt)
-            {
-                Console.WriteLine(course.Name);
+                Console.WriteLine($"\tLevel: {group.Key} | Course count: {group.Count()}"); // as you see there's no aggregation
+                foreach (var course in group)
+                {
+                    Console.WriteLine($"{course.Name}");
+                }
             }
         }
     }
