@@ -90,7 +90,7 @@ namespace Queries
 
             // Restriction: Filtering data
             var coursesLvlOne = context.Courses.Where(c => c.Level == 1); // filtering courses by level 1
-            Console.WriteLine("\tCourses filtered by Level 1");
+            Console.WriteLine("\tRestriction/Filtering - Courses filtered by Level 1");
             foreach(var course in coursesLvlOne)
             {
                 Console.WriteLine($"{course.Name}");
@@ -101,7 +101,7 @@ namespace Queries
                 .Where(c => c.Level == 1)
                 .OrderBy(c => c.Name); // filtering courses by level 1 and ordering them by name
 
-            Console.WriteLine("\n\tCourses ordered by Level and then by Full price");
+            Console.WriteLine("\n\tOrdering - Courses ordered by Level and then by Full price");
             var coursesOrdered = context.Courses
                 .OrderBy(c => c.Level)
                 .ThenBy(c => c.FullPrice); // ordering courses by level and then by full price
@@ -110,7 +110,7 @@ namespace Queries
                 Console.WriteLine($"Lv.{course.Level} - {course.Name} - ${course.FullPrice}");
             }
 
-            Console.WriteLine("\n\tCourses ordered by Level and then by Full price (Descending)");
+            Console.WriteLine("\n\tOrdering - Courses ordered by Level and then by Full price (Descending)");
             var coursesOrderedDesc = context.Courses
                 .OrderBy(c => c.Level)
                 .ThenByDescending(c => c.FullPrice); // ordering courses by level and then by full price descending
@@ -118,6 +118,34 @@ namespace Queries
             {
                 Console.WriteLine($"Lv.{course.Level} - {course.Name} - ${course.FullPrice}");
             }
+
+            // Projection: Selecting specific fields
+            Console.WriteLine("\n\tProjection - List of lists of tags");
+            var coursesListOfListTags = context.Courses
+                .OrderByDescending(c => c.Level)
+                .ThenByDescending(c => c.Name)
+                .Select(c => c.Tags); // list of list of tags (each course has a list of tags, so we end up with a list of lists)
+
+            foreach (var courseListTag in coursesListOfListTags) // course is a list of tags
+            {
+                foreach(var courseTag in courseListTag) // iterating over each tag in the list
+                {
+                    Console.WriteLine($"{courseTag.Name}"); // printing tag name
+                }
+            }
+
+            Console.WriteLine("\n\tProjection - List of lists of tags (Flatten)");
+            // if you want to flatten the list of lists into a single list, you can use SelectMany
+            var listTagsFlatten = context.Courses
+                .OrderByDescending(c => c.Level)
+                .ThenByDescending(c => c.Name)
+                .SelectMany(c => c.Tags); // list of tags (flattened)
+
+            foreach(var tag in listTagsFlatten)
+            {
+                Console.WriteLine($"{tag.Name}");
+            }
+            //Lesson: when you're using the Select method if the target property is a list/collection, you would end up with a list of lists/collections
         }
     }
 }
