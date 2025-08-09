@@ -82,17 +82,15 @@ namespace Queries
                 Console.WriteLine($"{row.AuthorName} - {row.CourseName}");
             }
         }
-        static void Main(string[] args)
-        {
-            var context = new PlutoContext();
-            //LinqSintax(context);
 
+        static void ExtensionMethods(PlutoContext context)
+        {
             // LINQ Extension Methods
 
             // Restriction: Filtering data
             var coursesLvlOne = context.Courses.Where(c => c.Level == 1); // filtering courses by level 1
             Console.WriteLine("\tRestriction/Filtering - Courses filtered by Level 1");
-            foreach(var course in coursesLvlOne)
+            foreach (var course in coursesLvlOne)
             {
                 Console.WriteLine($"{course.Name}");
             }
@@ -115,7 +113,7 @@ namespace Queries
             var coursesOrderedDesc = context.Courses
                 .OrderBy(c => c.Level)
                 .ThenByDescending(c => c.FullPrice); // ordering courses by level and then by full price descending
-            foreach(var course in coursesOrderedDesc)
+            foreach (var course in coursesOrderedDesc)
             {
                 Console.WriteLine($"Lv.{course.Level} - {course.Name} - ${course.FullPrice}");
             }
@@ -129,7 +127,7 @@ namespace Queries
 
             foreach (var courseListTag in coursesListOfListTags) // course is a list of tags
             {
-                foreach(var courseTag in courseListTag) // iterating over each tag in the list
+                foreach (var courseTag in courseListTag) // iterating over each tag in the list
                 {
                     Console.WriteLine($"{courseTag.Name}"); // printing tag name
                 }
@@ -142,7 +140,7 @@ namespace Queries
                 .ThenByDescending(c => c.Name)
                 .SelectMany(c => c.Tags); // list of tags (flattened)
 
-            foreach(var tag in listTagsFlatten)
+            foreach (var tag in listTagsFlatten)
             {
                 Console.WriteLine($"{tag.Name}");
             }
@@ -156,7 +154,7 @@ namespace Queries
                 .SelectMany(c => c.Tags)
                 .Distinct(); // makes the list of tags unique
 
-            foreach(var tag in listTagsFlattenDisct)
+            foreach (var tag in listTagsFlattenDisct)
             {
                 Console.WriteLine($"{tag.Name}");
             }
@@ -165,11 +163,11 @@ namespace Queries
             var coursesGroupedByLevel = context.Courses.GroupBy(c => c.Level); // grouping courses by their level
 
             Console.Write("\n\tGroupung courses by level");
-            foreach(var coursesLevel in coursesGroupedByLevel)
+            foreach (var coursesLevel in coursesGroupedByLevel)
             {
                 Console.WriteLine($"\nLevel {coursesLevel.Key}");
 
-                foreach(var course in coursesLevel)
+                foreach (var course in coursesLevel)
                 {
                     Console.WriteLine("\t" + course.Name);
                 }
@@ -202,7 +200,7 @@ namespace Queries
                 a => a.Id, // 3. ON a.Id
                 c => c.AuthorId, // 4. = ON c.AuthorId
                 (a, c) => // 5. SELECT a.Name as AuthorName, c.Count() as Courses
-                new 
+                new
                 {
                     AuthorName = a.Name,
                     Courses = c.Count()
@@ -218,6 +216,14 @@ namespace Queries
                     AuthorName = author.Name,
                     CourseName = course.Name
                 });
+        }
+
+        static void Main(string[] args)
+        {
+            var context = new PlutoContext();
+
+            //LinqSintax(context);
+            ExtensionMethods(context);
 
         }
     }
