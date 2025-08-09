@@ -159,6 +159,20 @@ namespace Queries
             {
                 Console.WriteLine($"{tag.Name}");
             }
+
+            // Grouping: Grouping courses by their level without using aggregation
+            var coursesGroupedByLevel = context.Courses.GroupBy(c => c.Level); // grouping courses by their level
+
+            Console.Write("\n\tGroupung courses by level");
+            foreach(var coursesLevel in coursesGroupedByLevel)
+            {
+                Console.WriteLine($"\nLevel {coursesLevel.Key}");
+
+                foreach(var course in coursesLevel)
+                {
+                    Console.WriteLine("\t" + course.Name);
+                }
+            }
         }
     }
 }
