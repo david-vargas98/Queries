@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics.Contracts;
+using System.Diagnostics.PerformanceData;
 using System.Linq;
 using System.Runtime.Remoting.Contexts;
 
@@ -173,6 +174,51 @@ namespace Queries
                     Console.WriteLine("\t" + course.Name);
                 }
             }
+
+            // Joining
+
+            // Inner Join: Joining courses with authors (imagine we don't have navigation property)
+            var coursesJoin = context.Courses.Join( // primary collection which we want to join
+                context.Authors, // secondary collection which we eant to join with
+                c => c.AuthorId, // Courses key: for each course we take the AuthorId value
+                a => a.Id, // Authors key: for each author we take the Id value
+                (course, author) => new // results selector: how we want to join those entities
+                {
+                    CourseName = course.Name,
+                    AuthorName = author.Name
+                });
+
+            /*
+             *          Equivalent to: 
+             * SELECT c.Name AS CourseName, a.Name AS AuthorName
+             * FROM Courses c
+             * INNER JOIN Authors a
+             * ON c.AuthorId = a.Id;
+            */
+
+            // Group Join: Grouping authors with their courses
+            var authorsGroupJoin = context.Authors.GroupJoin( // 1. FROM Authors a
+                context.Courses, // 2. JOIN Courses c
+                a => a.Id, // 3. ON a.Id
+                c => c.AuthorId, // 4. = ON c.AuthorId
+                (a, c) => // 5. SELECT a.Name as AuthorName, c.Count() as Courses
+                new 
+                {
+                    AuthorName = a.Name,
+                    Courses = c.Count()
+                });
+
+            // Cross Join: Cross join between authors and courses - every combination of every object in these two collections
+            // we don't have a direct method for cross join, but we can use SelectMany to achieve the same result
+            var crossJoin = context.Authors.SelectMany(
+                a => context.Courses,
+                (author, course) =>
+                new
+                {
+                    AuthorName = author.Name,
+                    CourseName = course.Name
+                });
+
         }
     }
 }
