@@ -146,6 +146,19 @@ namespace Queries
                 Console.WriteLine($"{tag.Name}");
             }
             //Lesson: when you're using the Select method if the target property is a list/collection, you would end up with a list of lists/collections
+
+            //We can also use distinct to get unique values
+            Console.WriteLine("\n\tProjection - List of lists of tags (Flatten and Distinct)");
+            var listTagsFlattenDisct = context.Courses
+                .OrderByDescending(c => c.Level)
+                .ThenByDescending(c => c.Name)
+                .SelectMany(c => c.Tags)
+                .Distinct(); // makes the list of tags unique
+
+            foreach(var tag in listTagsFlattenDisct)
+            {
+                Console.WriteLine($"{tag.Name}");
+            }
         }
     }
 }
