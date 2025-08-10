@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Diagnostics.PerformanceData;
 using System.Linq;
@@ -223,7 +224,139 @@ namespace Queries
             var context = new PlutoContext();
 
             //LinqSintax(context);
-            ExtensionMethods(context);
+            //ExtensionMethods(context);
+
+            // Additional Methods
+
+            // Skip and Take: Skipping and taking records
+            var firstFiveRecords = context.Courses
+                .OrderBy(c => c.Id)
+                .Skip(5) // Skipping the first 5 records
+                .Take(5); // Taking the next 5 records after skipping
+            Console.WriteLine("\n\tFirst 5 records after skipping 5:");
+            foreach(var course in firstFiveRecords)
+            {
+                Console.WriteLine($"Course {course.Id}: {course.Name}");
+            }
+
+            // Element operators: First, FirstOrDefault, Single, SingleOrDefault
+
+            // first: returns the first element of a sequence
+            var first = context.Courses.First(); // Returns the first course in the collection
+            Console.WriteLine($"\n\tFirst course in the collection:\n {first.Name}");
+
+            var firstOrdered = context.Courses.OrderByDescending(c => c.Level).First(); // Returns the first course ordered by level
+            Console.WriteLine($"\n\tFirst course in the collection ordered by level descending:\n {firstOrdered.Name}");
+
+
+            // firstOrDefault: returns the first element of a sequence, or a default value if no element is found
+            var firstOtDefault = context.Courses.OrderBy(c => c.Level).FirstOrDefault(); // this returns null if the collection is empty
+
+            // this returns null if no course matches the condition
+            var firstOtDefaultCond = context.Courses.OrderBy(c => c.Level).FirstOrDefault(c => c.FullPrice > 500);
+
+            Console.WriteLine($"\n\tFirstOrDefault course in the collection ordered by level:\n {firstOtDefault.Name}");
+            
+            if(firstOtDefaultCond != null)
+                Console.WriteLine($"\n\tFirstOrDefault course in the collection ordered by level with full price greather than 500:\n {firstOtDefaultCond.Name}");
+            else
+                Console.WriteLine($"\n\tNo course found with full price greather than 500");
+
+            // diference between First and FirstOrDefault: First throws an exception if the collection is empty, FirstOrDefault returns
+            // null (or default value for value types)
+
+            // last: returns the last element of a sequence
+            var array = new int[] { 4, 3, 1, 2, 9, 0 };
+            var emptyArray = new int[] {};
+
+            var last = array.Last(); // Returns the last course in the collection
+            
+            //var last = context.Courses.Last(); // for DBs throws an exception, since we don't have a direct operator to get the last record
+
+
+            // lastOrDefault: returns the last element of a sequence, or a default value if no element is found, these methods cannot be
+            // aplied within a database like SQL Server since in sql server we don't have an operator to get the last record directly
+            // tipically we use these methods in memory collections, like lists or arrays, xml, etc.
+
+            var lastOrDefault = emptyArray.LastOrDefault(e => e > 1); // Returns the last element of the array, or default value if the array is empty
+
+            //var lastOrDefault = context.Courses.LastOrDefault(); // this also throws an exception because we can't use it against dbs
+
+            // if we want to "simulate" the lastOrDefault in a database, we can use OrderByDescending and then take the first element
+            var lastOrDefaultSimulated = context.Courses.OrderByDescending(c => c.Id).FirstOrDefault();
+            Console.WriteLine($"\n\tLast course in the collection using decending and FirstOrDefault:\n {lastOrDefaultSimulated.Name}");
+
+            // Single: returns a single element of a sequence, and throws an exception if there is more than one element
+            var single = context.Courses.Single(c => c.Id == 1); // returns the course with id 1, if there's more then returns an exception
+            Console.WriteLine($"\n\tSingle course with Id 1:\n {single.Name}");
+
+            try
+            {
+                var singleError = context.Courses.Single(c => c.Level == 1); // this throws an exception, since there are more than one course
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine($"\n\tSingle Error: {ex.Message}"); // catches the exception and prints the message
+            }
+
+            var singleOrDefault = context.Courses.SingleOrDefault(c => c.Level == 4);
+            if(singleOrDefault != null)
+            {
+                Console.WriteLine($"\n\tSingleOrDefault course with Level 1:\n {singleOrDefault.Name}");
+            }
+            else
+            {
+                Console.WriteLine("\n\tNo course found with Level 1"); // if no course is found, it returns null
+            }
+
+            // Quantifying operators: All, Any, Contains
+
+            // All: checks if all elements in a sequence satisfy a condition
+            var coursesFullPrice = context.Courses.All(c => c.FullPrice > 10); // returns true if all courses have a full price greater than 10, false otherwise
+            Console.WriteLine($"\n\tAll courses have a full price greater than 10?: {coursesFullPrice}");
+
+            // Any: checks if any element in a sequence satisfies a condition
+            var coursesAny = context.Courses.Any(c => c.Level == 3); // is there any course of level 3?
+            Console.WriteLine($"\n\tAny course with Level 3?: {coursesAny}");
+
+            // contains: checks if a sequence contains a specific element
+            var ids = new List<int> { 1, 2, 3 };
+            var coursesContains = context.Courses.Where(c => ids.Contains(c.Id)); // checks if the courses collection contains any course with Id in the ids list
+            Console.WriteLine("The Courses table contains any of the 'ids' list elements:");
+            foreach(var id in ids)
+            {
+                Console.Write(id + " ");
+            }
+            Console.WriteLine("\n");
+            foreach (var course in coursesContains)
+            {
+                Console.WriteLine($"id:{course.Id} - {course.Name}\n");
+            }
+            // Aggregating operators: Count, Sum, Average, Min, Max
+
+            // count: counts the number of elements in a sequence
+            var coursesCount = context.Courses.Count(); // counts the number of courses in the collection
+            Console.WriteLine($"\n\tTotal number of courses: {coursesCount}");
+
+            // max: returns the maximum value in a sequence
+            var maxPrice = context.Courses.Max(c => c.FullPrice); // returns the maximum full price of all courses
+            Console.WriteLine($"\n\tMaximum full price of all courses: ${maxPrice}");
+
+            // min: returns the monimum value in a sequence
+            var minPrice = context.Courses.Min(c => c.FullPrice); // returns the minimum full price of all courses
+            Console.WriteLine($"\n\tMinimum full price of all courses: ${minPrice}");
+
+            //average: returns the average value in a sequence
+            var averagePrice = context.Courses.Average(c => c.FullPrice); // returns the average full price of all courses
+            Console.WriteLine($"\n\tAverage full price of all courses: ${Math.Round(averagePrice, 2)}");
+
+            // chaining aggregating methods
+            var coursesCountChained = context.Courses.Where(c => c.Level == 1).Count(); // counts the number of courses of level 1
+            Console.WriteLine($"\n\tTotal number of courses of Level 1: {coursesCountChained}");
+
+            // chaining aggregating even simplified
+            var coursesCountChainedSimplified = context.Courses.Count(c => c.Level == 1); // counts the number of courses of level 1
+            Console.WriteLine($"\n\tTotal number of courses of Level 1 (simplified): {coursesCountChainedSimplified}");
 
         }
     }
