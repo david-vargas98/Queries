@@ -354,15 +354,9 @@ namespace Queries
             var coursesCountChainedSimplified = context.Courses.Count(c => c.Level == 1); // counts the number of courses of level 1
             Console.WriteLine($"\n\tTotal number of courses of Level 1 (simplified): {coursesCountChainedSimplified}");
         }
-
-        static void Main(string[] args)
+        
+        static void DeferredExecution(PlutoContext context)
         {
-            var context = new PlutoContext();
-
-            //LinqSintax(context);
-            //ExtensionMethods(context);
-            //AdditionalExtensionMethods(context);
-
             // Deferred Execution: this means that the query is not executed when it is defined, but when we need the data
 
             // when we execute something like the following line, no SQL query has been executed yet (in EF), not even filters have been
@@ -379,7 +373,7 @@ namespace Queries
             // Example/Exercise of deferred execution
             var courses = context.Courses; // all of the courses, no SQL executed yet
 
-            foreach(var course in courses)
+            foreach (var course in courses)
             {
                 Console.WriteLine(course.Name);
             }
@@ -400,14 +394,14 @@ namespace Queries
             var coursesTwoFilteredSorted = coursesTwoFiltered.OrderBy(c => c.Name); // neither this is executed, so we're extending the query
 
             // later the query gets exectuted inside the foreach loop
-            foreach(var course in coursesTwoFilteredSorted)
+            foreach (var course in coursesTwoFilteredSorted)
             {
                 Console.WriteLine($"{course.Id} - {course.Name}");
             }
 
             // the same quey but chained together
             var coursesChained = context.Courses.Where(c => c.Level == 1).OrderBy(c => c.Name); // this is also not executed yet
-            foreach(var course in coursesChained) // here the query gets executed
+            foreach (var course in coursesChained) // here the query gets executed
             {
                 Console.WriteLine($"{course.Id} - {course.Name}");
             }
@@ -423,7 +417,7 @@ namespace Queries
 
             //- so, if we want to use the IsBeginnerCourse property, we need to execute the query immediately this means, we'll load the
             // courses from the db first, and then filter them in memory, so this is where we use immediate execution
-            
+
             var coursesImmediate = context.Courses
                 .ToList() // this will load all courses from the db into memory 
                 .Where(c => c.IsBeginnerCourse == true); // and then filter them in memory
@@ -435,6 +429,18 @@ namespace Queries
             // actually there's a workaround for this, but it's not recommended, since it can lead to performance issues
 
             // You can use this approach if you have an application that handles a small amount of data, and you don't care about performance
+        }
+
+        static void Main(string[] args)
+        {
+            var context = new PlutoContext();
+
+            //LinqSintax(context);
+            //ExtensionMethods(context);
+            //AdditionalExtensionMethods(context);
+            DeferredExecution(context);
+
+            
         }
     }
 }
