@@ -4,7 +4,9 @@ using System.Data.Entity.Core.Objects;
 using System.Diagnostics.Contracts;
 using System.Diagnostics.PerformanceData;
 using System.Linq;
+using System.Reflection.Emit;
 using System.Runtime.Remoting.Contexts;
+using System.Xml.Linq;
 
 namespace Queries
 {
@@ -438,9 +440,81 @@ namespace Queries
             //LinqSintax(context);
             //ExtensionMethods(context);
             //AdditionalExtensionMethods(context);
-            DeferredExecution(context);
+            //DeferredExecution(context);
 
-            
+            // IQueryable vs IEnumerable
+
+            // - IQueryable is a queryable interface that allows you to build queries that can be executed against a database
+            // - IEnumerable is a collection interface that allows you to iterate over a collection of objects in memory
+
+            // since DBSet implements IQueryable, we can instantiate it like this, instead of var courses = context.Courses.ToList();
+            IQueryable<Course> coursesIQueryable = context.Courses;
+            var filteredCoursesIQ = coursesIQueryable.Where(c => c.Level == 1);
+
+            // checking the previous query on sql profiler, it generates the following SQL query:
+            // SELECT 
+            // [Extent1].[Id] AS[Id], 
+            // [Extent1].[Name] AS[Name], 
+            // [Extent1].[Description] AS[Description], 
+            // [Extent1].[Level] AS[Level], 
+            // [Extent1].[FullPrice] AS[FullPrice], 
+            // [Extent1].[AuthorId] AS[AuthorId]
+            // FROM[dbo].[Courses] AS[Extent1]
+            // WHERE 1 = [Extent1].[Level] -----> note that the filter is part of the SQL query, so it is executed in the database
+            //                                    that's because we are using IQueryable, the orginal query is extended to the filter
+
+            foreach (var course in filteredCoursesIQ)
+            {
+                Console.WriteLine($"{course.Id} - {course.Name} - Is for begginers?: {course.IsBeginnerCourse}");
+            }
+
+            IEnumerable<Course> coursesIEnumerable = context.Courses;
+            var filteredCoursesIE = coursesIEnumerable.Where(c => c.Level == 1);
+
+            // checking the previous query on sql profiler, it generates the following SQL query:
+            // SELECT
+            // [Extent1].[Id] AS[Id], 
+            // [Extent1].[Name] AS[Name], 
+            // [Extent1].[Description] AS[Description], 
+            // [Extent1].[Level] AS[Level], 
+            // [Extent1].[FullPrice] AS[FullPrice], 
+            // [Extent1].[AuthorId] AS[AuthorId]
+            // FROM[dbo].[Courses] AS[Extent1]
+
+            // Notice the Where clause is not part of the SQL query, so it is executed in memory
+
+            foreach (var course in filteredCoursesIE)
+            {
+                Console.WriteLine($"{course.Id} - {course.Name} - Is for begginers?: {course.IsBeginnerCourse}");
+            }
+
+            // What does this mean?
+
+            // It means that you're gonna get all courses from the database, even if there are a BILLION of those courses, load them
+            // in memory and then apply the filter, which is NOT efficient
+
+            // The reason fot that is when you use IEnumerable, you cannot extend the query, since it is already executed and when it comes
+            // to the foearch loop, the filter is applied in memory, so it was not translated to SQL.
+
+            // ------------------------------------------------------------------------------------------
+            // How IQueryable allows you to extend the query?
+            // ------------------------------------------------------------------------------------------
+
+            IEnumerable<Course> IEnumerable = context.Courses;
+
+            // LINQ extension methods on IEnumerable expects a func or a delegate as a parameter, so it can be executed in memory
+            var resultIEnum = IEnumerable.Where(ie => ie.Level == 1); // this is executed in memory first, so it cannot be translated to SQL
+
+            IQueryable<Course> IQueryable = context.Courses;
+
+            // LINQ extension methods on IQueryable expects an expression tree as a parameter (lambda expression), so it can be translated to SQL
+            IQueryable.Where(iq => iq.Level == 1); // this is translated to SQL, so it can be executed in the database, so it can be extended
+                                                   // it's simply stored in an expression object.
+                                                   // Later, when this query variable is executed, all these expressions will be compiled
+                                                   // and translated into SQL code, and run altogether against the database
+
+
+
         }
     }
 }
