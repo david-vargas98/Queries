@@ -433,15 +433,8 @@ namespace Queries
             // You can use this approach if you have an application that handles a small amount of data, and you don't care about performance
         }
 
-        static void Main(string[] args)
+        static void IEnumerableVsIQueryable(PlutoContext context)
         {
-            var context = new PlutoContext();
-
-            //LinqSintax(context);
-            //ExtensionMethods(context);
-            //AdditionalExtensionMethods(context);
-            //DeferredExecution(context);
-
             // IQueryable vs IEnumerable
 
             // - IQueryable is a queryable interface that allows you to build queries that can be executed against a database
@@ -512,9 +505,17 @@ namespace Queries
                                                    // it's simply stored in an expression object.
                                                    // Later, when this query variable is executed, all these expressions will be compiled
                                                    // and translated into SQL code, and run altogether against the database
+        }
 
+        static void Main(string[] args)
+        {
+            var context = new PlutoContext();
 
-
+            //LinqSintax(context);
+            //ExtensionMethods(context);
+            //AdditionalExtensionMethods(context);
+            //DeferredExecution(context);
+            IEnumerableVsIQueryable(context);           
         }
     }
 }
