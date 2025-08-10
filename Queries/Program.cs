@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Entity.Core.Objects;
 using System.Diagnostics.Contracts;
 using System.Diagnostics.PerformanceData;
 using System.Linq;
@@ -361,8 +362,79 @@ namespace Queries
             //LinqSintax(context);
             //ExtensionMethods(context);
             //AdditionalExtensionMethods(context);
-            
 
+            // Deferred Execution: this means that the query is not executed when it is defined, but when we need the data
+
+            // when we execute something like the following line, no SQL query has been executed yet (in EF), not even filters have been
+            // applied. The only thing you've done is to build an object that knows how to get the data when you need it:
+            var exampleQuery = context.Courses.Where(c => c.Level == 1);
+
+            // Real execution:  the query gets executed when you do something that materializes the results, such as ToList(), ToArray(),
+            // ToDictionary(), First(), FirstOrDefault(), Single(), SingleOrDefault(), Count(), etc. Even a for each loop will do it.
+
+            var exampleQuery2 = context.Courses.Where(c => c.Level == 1); // SQL is not executed yet, just a query object is created
+
+            var list = exampleQuery2.ToList(); // here the SQL query is executed, and the results are materialized into a list
+
+            // Example/Exercise of deferred execution
+            var courses = context.Courses; // all of the courses, no SQL executed yet
+
+            foreach(var course in courses)
+            {
+                Console.WriteLine(course.Name);
+            }
+
+            // Queries are executed when:
+            // 1. You iterate over the results (foreach loop)
+            // 2. Calling methods that materialize the results (ToList(), ToArray(), ToDictionary(), etc.)
+            // 3. Any methods that return a singleton value (First(), FirstOrDefault(), Last(), Single(), SingleOrDefault(), Count(), etc.)
+
+            // This is what we call deferred execution, queries are not executed immediately when they are defined, but when we need the data
+
+            // Which are the benefits of deferred execution?
+
+            // Deferred execution enables queries to be extended: We can extend this query and filter only courses in level 1:
+            var coursesTwo = context.Courses; // is not executed yet against the database
+            var coursesTwoFiltered = coursesTwo.Where(c => c.Level == 1); // this is also not executed yet
+            // and even sort them by name:
+            var coursesTwoFilteredSorted = coursesTwoFiltered.OrderBy(c => c.Name); // neither this is executed, so we're extending the query
+
+            // later the query gets exectuted inside the foreach loop
+            foreach(var course in coursesTwoFilteredSorted)
+            {
+                Console.WriteLine($"{course.Id} - {course.Name}");
+            }
+
+            // the same quey but chained together
+            var coursesChained = context.Courses.Where(c => c.Level == 1).OrderBy(c => c.Name); // this is also not executed yet
+            foreach(var course in coursesChained) // here the query gets executed
+            {
+                Console.WriteLine($"{course.Id} - {course.Name}");
+            }
+
+            // Immediate Execution: this means that the query is executed immediately, and the results are materialized into a collection
+
+            // - There are times that you may want to immediately execute a query, because your quieres cannot be translated into SQL
+
+            // - For example, if you have a calculated property in your entity, like IsBeginnerCourse in Course class:
+            // it cannot be translated into SQL, so we need to execute the query immediately
+
+            //var coursesImmediate = context.Courses.Where(c => c.IsBeginnerCourse == true); // thwrows an exception
+
+            //- so, if we want to use the IsBeginnerCourse property, we need to execute the query immediately this means, we'll load the
+            // courses from the db first, and then filter them in memory, so this is where we use immediate execution
+            
+            var coursesImmediate = context.Courses
+                .ToList() // this will load all courses from the db into memory 
+                .Where(c => c.IsBeginnerCourse == true); // and then filter them in memory
+
+            // WARNING: this is not efficient, since it loads all courses from the db into memory, and then filters them in memory
+            //          so, the performance of the application may be affected if you have a lot of data in the db
+
+            // RECOMENDATION: So, if you want to go for an optimized solution, you cannot use calculated properties in your queries, well
+            // actually there's a workaround for this, but it's not recommended, since it can lead to performance issues
+
+            // You can use this approach if you have an application that handles a small amount of data, and you don't care about performance
         }
     }
 }
