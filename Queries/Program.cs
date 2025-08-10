@@ -219,13 +219,8 @@ namespace Queries
                 });
         }
 
-        static void Main(string[] args)
+        static void AdditionalExtensionMethods(PlutoContext context)
         {
-            var context = new PlutoContext();
-
-            //LinqSintax(context);
-            //ExtensionMethods(context);
-
             // Additional Methods
 
             // Skip and Take: Skipping and taking records
@@ -234,7 +229,7 @@ namespace Queries
                 .Skip(5) // Skipping the first 5 records
                 .Take(5); // Taking the next 5 records after skipping
             Console.WriteLine("\n\tFirst 5 records after skipping 5:");
-            foreach(var course in firstFiveRecords)
+            foreach (var course in firstFiveRecords)
             {
                 Console.WriteLine($"Course {course.Id}: {course.Name}");
             }
@@ -256,8 +251,8 @@ namespace Queries
             var firstOtDefaultCond = context.Courses.OrderBy(c => c.Level).FirstOrDefault(c => c.FullPrice > 500);
 
             Console.WriteLine($"\n\tFirstOrDefault course in the collection ordered by level:\n {firstOtDefault.Name}");
-            
-            if(firstOtDefaultCond != null)
+
+            if (firstOtDefaultCond != null)
                 Console.WriteLine($"\n\tFirstOrDefault course in the collection ordered by level with full price greather than 500:\n {firstOtDefaultCond.Name}");
             else
                 Console.WriteLine($"\n\tNo course found with full price greather than 500");
@@ -267,10 +262,10 @@ namespace Queries
 
             // last: returns the last element of a sequence
             var array = new int[] { 4, 3, 1, 2, 9, 0 };
-            var emptyArray = new int[] {};
+            var emptyArray = new int[] { };
 
             var last = array.Last(); // Returns the last course in the collection
-            
+
             //var last = context.Courses.Last(); // for DBs throws an exception, since we don't have a direct operator to get the last record
 
 
@@ -294,13 +289,13 @@ namespace Queries
             {
                 var singleError = context.Courses.Single(c => c.Level == 1); // this throws an exception, since there are more than one course
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Console.WriteLine($"\n\tSingle Error: {ex.Message}"); // catches the exception and prints the message
             }
 
             var singleOrDefault = context.Courses.SingleOrDefault(c => c.Level == 4);
-            if(singleOrDefault != null)
+            if (singleOrDefault != null)
             {
                 Console.WriteLine($"\n\tSingleOrDefault course with Level 1:\n {singleOrDefault.Name}");
             }
@@ -323,7 +318,7 @@ namespace Queries
             var ids = new List<int> { 1, 2, 3 };
             var coursesContains = context.Courses.Where(c => ids.Contains(c.Id)); // checks if the courses collection contains any course with Id in the ids list
             Console.WriteLine("The Courses table contains any of the 'ids' list elements:");
-            foreach(var id in ids)
+            foreach (var id in ids)
             {
                 Console.Write(id + " ");
             }
@@ -357,6 +352,16 @@ namespace Queries
             // chaining aggregating even simplified
             var coursesCountChainedSimplified = context.Courses.Count(c => c.Level == 1); // counts the number of courses of level 1
             Console.WriteLine($"\n\tTotal number of courses of Level 1 (simplified): {coursesCountChainedSimplified}");
+        }
+
+        static void Main(string[] args)
+        {
+            var context = new PlutoContext();
+
+            //LinqSintax(context);
+            //ExtensionMethods(context);
+            //AdditionalExtensionMethods(context);
+            
 
         }
     }
