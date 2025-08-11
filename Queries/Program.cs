@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Entity;
+using System.Data.Entity.Core.Common.CommandTrees;
 using System.Linq;
 using System.Reflection.Emit;
 using System.Runtime.Remoting.Contexts;
@@ -691,16 +692,6 @@ namespace Queries
 
         static void AddingObjectsToTheDB(PlutoContext context)
         {
-            //LinqSintax(context);
-            //ExtensionMethods(context);
-            //AdditionalExtensionMethods(context);
-            //DeferredExecution(context);
-            //IEnumerableVsIQueryable(context);
-            //LazyLoading(context);
-            //NPlusOneQueries(context);    
-            //EagerLoading(context);
-            //ExplicitLoading(context);
-
             // Adding objects to the database
 
             var course = new Course // new course object to be added to the db
@@ -912,11 +903,55 @@ namespace Queries
             // Example: author.IsDeleted = true;
         }
 
+        static void ChangeTracker(PlutoContext context)
+        {
+            // Working with change tracker
+
+            // Add an object to the context
+            context.Authors.Add(new Author { Name = "New Author xd" });
+
+            // Update an object in the context
+            var author = context.Authors.Find(3);
+            author.Name = "Updated Author Name";
+
+            // Remove an object from the context
+            var another = context.Authors.Find(4);
+            context.Authors.Remove(another);
+
+            // Getting the state of these objects from the change tracker
+            var authorEntries = context.ChangeTracker.Entries<Author>(); // and specific entry (author in this case)
+
+            foreach (var entry in authorEntries)
+            {
+                Console.WriteLine($"Author: {entry.Entity.Name}, State: {entry.State}"); // this will print the state of each author in the change tracker
+            }
+
+            var allEntries = context.ChangeTracker.Entries(); // all entries in the DB context
+
+            foreach (var entry in allEntries)
+            {
+                entry.Reload(); // this could be useful if you've edited an entry or you changed your mind and you want ro reload from the db  
+                Console.WriteLine($"Entity: {entry.Entity.GetType().Name}, State: {entry.State}"); // this will print the state of each entity in the change tracker
+            }
+        }
+
         static void Main(string[] args)
         {
             var context = new PlutoContext();
 
-            
+            //LinqSintax(context);
+            //ExtensionMethods(context);
+            //AdditionalExtensionMethods(context);
+            //DeferredExecution(context);
+            //IEnumerableVsIQueryable(context);
+            //LazyLoading(context);
+            //NPlusOneQueries(context);    
+            //EagerLoading(context);
+            //ExplicitLoading(context);
+            //AddingObjectsToTheDB(context);
+            //UpdatingObjectsInTheDB(context);
+            //DeletingObjectsInTheDB(context);
+            //ChangeTracker(context);
         }
     }
 }
