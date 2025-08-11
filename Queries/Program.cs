@@ -686,7 +686,7 @@ namespace Queries
             context.Courses.Where(c => authorIds.Contains(c.AuthorId) && c.FullPrice == 0).Load(); // Sql will use the IN operator to select multiple courses
         }
 
-        static void AddinObjectsToTheDB(PlutoContext context)
+        static void AddingObjectsToTheDB(PlutoContext context)
         {
             //LinqSintax(context);
             //ExtensionMethods(context);
@@ -779,9 +779,26 @@ namespace Queries
             //   - Otherwise, use the foreign key property to create the association between the course and the author (simpler and cleaner)
         }
 
+        static void UpdatingObjectsInTheDB(PlutoContext context)
+        {
+            // Updating objects in the database with EF
+
+            // Find: helps you to find object by its primary key, shorter way of doing Single(c => c.Id == 4), if it has composite keys we can pass more args; Find(1,2) etc
+            var course = context.Courses.Find(4); // this will find the course with Id 4 in the database
+
+            course.Name = "Updated Course Name"; // updating the previosly obtained course object
+            course.AuthorId = 2; // updating the author of the course, this is the foreign key property
+
+            context.SaveChanges(); // this will save the changes to the database, so now the course is updated
+
+            // As you see, in order to update an object in the database, you need to first load it from your DB into the context, then modify the properties you want to
+            // change, and finally call the SaveChanges() method to save the changes to the database. This is because of the change tracker mechanism in EF, which keeps
+            // track of the changes made to the objects in the context.
+        }
+
         static void Main(string[] args)
         {
-            var context = new PlutoContext(); 
+            var context = new PlutoContext();
 
             
         }
