@@ -1,12 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.Entity.Core.Objects;
-using System.Diagnostics.Contracts;
-using System.Diagnostics.PerformanceData;
+using System.Data.Entity;
 using System.Linq;
-using System.Reflection.Emit;
 using System.Runtime.Remoting.Contexts;
-using System.Xml.Linq;
 
 namespace Queries
 {
@@ -507,6 +503,121 @@ namespace Queries
                                                    // and translated into SQL code, and run altogether against the database
         }
 
+        static void LazyLoading(PlutoContext context)
+        {
+            // Lazy loading: this is a feature of Entity Framework that allows you to load related entities on demand
+
+            // when this line is executed, EF is gonna send a SQL query to the database to select the course with Id 2
+            // that's because we're using the single method, any of these singleton methods will execute the query, first,
+            // firstOrDefault, single, singleOrDefault, count, max, min, average, etc. These methods cause immediate execution
+            var course = context.Courses.Single(c => c.Id == 2); // checking sql profiler
+
+            // however, course doesn't have its tags initialized yet, later when we access the course.Tags, EF is gonna send
+            // another SQL query to the DB to get the tags for this course
+
+            // SO, this is called lazy loading, because the related entities (tags in this case) are not loaded immediately,
+            // they are loaded on demand, when we access them for the first time
+            foreach (var tag in course.Tags) // checking sql profiler
+                Console.WriteLine(tag.Name);
+
+            // BEST PRACTICES:
+
+            // 1. Use lazy loading when loading an object graph is costly and you don't need all the related entities immediately
+            //    so, we use it load only the main objects and load the related entities on demand
+            // 2. Use it desktop applications, where you have a lot of memory available, and you don't care about the performance
+            // 3. Avoid lazy loading in web applications, since it can cause performance issues, can cause unnecesary SQL queries
+
+            // In web applications, we can disable lazy loading by not declaring the properties as virtual, but this means that
+            // you need to make sure to follow this rule for every navigation property.
+
+            // There's a better way to guarantee that lazy loading is disabled in the entire context, and that is using a
+            // configuration --> Go to PlutoContext.cs and check the constructor where we disable lazy loading.
+        }
+
+        static void NPlusOneQueries(PlutoContext context)
+        {
+            // If lazy loading is used innapropriately, it can lead to the N+1 problem, which is a performance issue
+
+            // The N+1 problem occurs when you load a collection of entities, and then for each entity, you load a related entity
+
+            // For example: Courses an Tags, if we load all courses, and then for each course, we load its tags, this can lead
+            // to N+1 queries:
+
+            // if we do:
+            var courses = context.Courses.ToList(); // EF sends a query to load all courses, such as: SELECT * FROM Courses;
+
+            // and then, if we iterate over the courses and access their tags:
+            foreach (var course in courses)
+            {
+                Console.WriteLine($"Course: {course.Name}");
+                foreach (var tag in course.Tags) // <-- if lazy loading is enabled, EF sends another query to bring the tags
+                {                                // for each course, so if we have N courses
+                    Console.WriteLine($"  Tag: {tag.Name}");
+                }
+            }
+
+            // So we have a query such as:
+            // SELECT* FROM Tags
+            // INNER JOIN CourseTags ON Tags.Id = CourseTags.TagId
+            // WHERE CourseTags.CourseId = 1;
+
+            // and then, that's for the second course, the third, fourth, until the last course
+
+            // So, the result is:
+            // 1 query to load all courses
+            // + N additional queries to load the tags for each course = N+1 queries
+            // So, if we have 1000 courses, we end up with 1001 queries:
+            // - 1 for the first query to load all courses
+            // - N, in this exmaple a 1000 for each course to load its tags, summarizing, we have 1001 queries
+
+            // Another example:
+            foreach (var course in courses)
+            {
+                Console.WriteLine("{0} by {1}", course.Name, course.Author.Name); // EF sends a query per course to load the author
+            }                                                                      // this is our N queries + 1 Initial query
+
+            // NOTE: if lazy loading is disabled, the above foreach loop will throw an exception, since the Author property is not loaded
+        }
+
+        static void EagerLoading(PlutoContext context)
+        {
+            //Eager Loading: this is a feature of Entity Framework that allows you to load related entities immediately, this
+            //               prevents additional queries to the database when accessing related entities
+
+            // Taking the n+1 problem into account, we can use eager loading to load related entities immediately by
+            // uing the Include method, which is an extension method of IQueryable:
+
+            // This is one way to eager load related entities, using the Include method and a "Magic String" (string name of the
+            // navigation property), however, this is a bad practice, imagine we change the name of the navigation property xd
+
+            //var courses = context.Courses.Include("Author").ToList();
+
+            // So that's why instead of using a magic string, we can use a lambda expression to specify the navigation property
+            // we want to include, we need to include System.Data.Entity namespace to use the Include method:
+
+            var courses = context.Courses.Include(c => c.Author).ToList(); // this will load all courses and their authors in a single query
+
+            foreach (var course in courses)
+            {
+                Console.WriteLine("{0} by {1}", course.Name, course.Author.Name); // EF sends a query per course to load the author
+            }
+
+            /// Multiple levels
+
+            // For single properties, we can use the Include method to load related entities, like this:
+            context.Courses.Include(c => c.Author.Name);
+
+            // For collection properties, we need to select the collection property, we can't access collection
+            // properties directly:
+            context.Courses.Include(c => c.Tags).Select(t => t.Name);
+
+            // So, the usage of one or another depends on the type of property we want to include, as an ingenier, you should
+            // decide which properties you want to include based on the requirements of your application
+
+            // Also, there's a third way to load related objects, which is called Explicit Loading, this can be useful in
+            // situations where you still to eager load a lot of objects but your queries are getting too complex.
+        }
+
         static void Main(string[] args)
         {
             var context = new PlutoContext();
@@ -515,7 +626,10 @@ namespace Queries
             //ExtensionMethods(context);
             //AdditionalExtensionMethods(context);
             //DeferredExecution(context);
-            IEnumerableVsIQueryable(context);           
+            //IEnumerableVsIQueryable(context);
+            //LazyLoading(context);
+            //NPlusOneQueries(context);    
+            EagerLoading(context);
         }
     }
 }
