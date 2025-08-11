@@ -2,7 +2,10 @@
 using System.Collections.Generic;
 using System.Data.Entity;
 using System.Linq;
+using System.Reflection.Emit;
 using System.Runtime.Remoting.Contexts;
+using System.Threading;
+using System.Xml.Linq;
 
 namespace Queries
 {
@@ -794,6 +797,119 @@ namespace Queries
             // As you see, in order to update an object in the database, you need to first load it from your DB into the context, then modify the properties you want to
             // change, and finally call the SaveChanges() method to save the changes to the database. This is because of the change tracker mechanism in EF, which keeps
             // track of the changes made to the objects in the context.
+        }
+
+        static void DeletingObjectsInTheDB(PlutoContext context)
+        {
+            // Deleting objects using EF
+
+            // ------------- Cascade delete: when using code first migrations, cascade delete is enabled by default, if you want to disable it, you have to explicitly do so
+            var course = context.Courses.Find(7); // this will find the course with Id 7 in the database
+
+            context.Courses.Remove(course); // this will remove the course from the context, but not from the database yet
+            context.SaveChanges(); // this will save the changes to the database, since we have cascade delete enabled, EF will also delete the related objects
+
+            // The following queries are executed in the database to delete the course with Id 7:
+
+            //exec sp_executesql N'SELECT TOP (2) 
+            // [Extent1].[Id] AS[Id], 
+            // [Extent1].[Name] AS[Name], 
+            // [Extent1].[Description] AS[Description], 
+            // [Extent1].[Level] AS[Level], 
+            // [Extent1].[FullPrice] AS[FullPrice], 
+            // [Extent1].[AuthorId] AS[AuthorId]
+            // FROM[dbo].[Courses] AS[Extent1]
+            // WHERE[Extent1].[Id] = @p0',N'@p0 int',@p0=7
+
+            //exec sp_executesql N'DELETE [dbo].[Courses]
+            //WHERE([Id] = @0)',N'@0 int',@0=7
+
+            // The last query deletes the course and its relationship with its tags, since we have cascade delete enabled, EF will also delete the related objects
+
+
+
+
+
+
+            // -------------- No cascade delete: when you delete an object, EF will not delete the related objects, you have to do it manually
+            var author = context.Authors.Find(2);
+            //context.Authors.Remove(author);
+            //context.SaveChanges(); // this will throw an exception, since the author has related courses, and cascade delete is not enabled
+            // Exception: SqlException: The DELETE statement conflicted with the REFERENCE constraint "FK_dbo.Courses_dbo.Authors_AuthorId".
+
+
+            // So, in this case we need to explictly delete the related courses first, before deleting the author
+            var test = context.Courses.Join(context.Authors, c => c.AuthorId, a => a.Id, (a, c) => new { AuthorName = a.Name, CourseName = c.Name }).ToList();
+
+            // First, we eager load tha Author and its related courses, so we can delete them first:
+            var authorNoCascade = context.Authors.Include(a => a.Courses).Single(a => a.Id == 2); // Author and his courses
+
+            context.Courses.RemoveRange(authorNoCascade.Courses); // Explicitly deleting the related courses -- RemoveRange accepts an IEnumerable<T> so we can pass the
+                                                                  // collection. of courses to delete them all at once, instead of deleting them on a for each loop
+
+            context.Authors.Remove(authorNoCascade); // Now we can delete the author, since we already deleted the related courses
+
+            context.SaveChanges(); // this will save the changes to the database, so now the author and its related courses are removed from the db
+
+            // Queries from sql profiler
+
+            // Authors and its related courses:
+
+            // SELECT
+            // [Project1].[Id] AS[Id], 
+            // [Project1].[Name] AS[Name], 
+            // [Project1].[C1] AS[C1], 
+            // [Project1].[Id1] AS[Id1], 
+            // [Project1].[Name1] AS[Name1], 
+            // [Project1].[Description] AS[Description], 
+            // [Project1].[Level] AS[Level], 
+            // [Project1].[FullPrice] AS[FullPrice], 
+            // [Project1].[AuthorId] AS[AuthorId]
+            // FROM(SELECT
+            //     [Limit1].[Id] AS[Id],
+            //     [Limit1].[Name] AS[Name],
+            //     [Extent2].[Id] AS[Id1],
+            //     [Extent2].[Name] AS[Name1],
+            //     [Extent2].[Description] AS[Description],
+            //     [Extent2].[Level] AS[Level],
+            //     [Extent2].[FullPrice] AS[FullPrice],
+            //     [Extent2].[AuthorId] AS[AuthorId],
+            //     CASE WHEN([Extent2].[Id] IS NULL) THEN CAST(NULL AS int) ELSE 1 END AS[C1]
+            //     FROM(SELECT TOP(2)[Extent1].[Id] AS[Id], [Extent1].[Name] AS[Name]
+            //         FROM[dbo].[Authors] AS[Extent1]
+            //         WHERE 2 = [Extent1].[Id]) AS[Limit1]
+            //     LEFT OUTER JOIN[dbo].[Courses] AS[Extent2] ON[Limit1].[Id] = [Extent2].[AuthorId]
+            // )  AS[Project1]
+            // ORDER BY[Project1].[Id] ASC, [Project1].[C1] ASC
+
+
+            // Deleting the related courses:
+
+            //exec sp_executesql N'DELETE [dbo].[Courses]
+            // WHERE([Id] = @0)',N'@0 int',@0=4
+            // 
+            // 
+            // exec sp_executesql N'DELETE [dbo].[Courses]
+            // WHERE([Id] = @0)',N'@0 int',@0=5
+            // 
+            // exec sp_executesql N'DELETE [dbo].[Authors]
+            // WHERE([Id] = @0)',N'@0 int',@0=2
+
+            // So first we delete the courses related to the author, and then we delete the author itself, this is how it's done when cascade delete is not enabled
+
+
+            // -------------------------------------------------------------------
+            // --------------------------- BEST PRACTICES ------------------------
+            // -------------------------------------------------------------------
+
+            // - When you delete records within your database, always think twice, since it could come a lot of problems, it's prefered to not physically delete records from
+            //   the DB, because sometimes we need these records for historical reasons.
+            // - Plus, we want to be able to UNDO some of these deletes if there were accidents, so it's a common practice to use a BIT flag to logically delete records in a
+            //   database, so when you wanna delete records, instead of physically deleting them, just turn on that bit flag and set it to 1 or true, so if later you change
+            //   your mind you can set it back to 0 or false, and the record will be "undeleted" or "reactivated"
+
+            // AKA Logical Delete or Soft Delete
+            // Example: author.IsDeleted = true;
         }
 
         static void Main(string[] args)
