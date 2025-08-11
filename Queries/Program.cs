@@ -618,6 +618,74 @@ namespace Queries
             // situations where you still to eager load a lot of objects but your queries are getting too complex.
         }
 
+        static void ExplicitLoading(PlutoContext context)
+        {
+            // Explicit loading: this is a feature similar to eager loading, we tell EF exactly what should be loaded ahead
+            // of time.
+
+            // The difference between eager loading and explicit loading is that in eager loading EF will join the related
+            // tables and query all the data in one roundtrip, whereas with eager loading, there will be multiple queries
+            // depending on the number of explicit loads you have in your code
+
+            // Summary
+            // Eager loading:                       Explicit Loading:
+            // - Uses JOINs                         - Separate queries
+            // - One round-trip to the database     - Multiple round-trips to the database
+
+            // Eager loading:
+            var author = context.Authors.Include(a => a.Courses).Single(a => a.Id == 1); // this will eager load the courses for the author with Id 1
+
+            foreach (var course in author.Courses)
+            {
+                Console.WriteLine("{0}", course.Name);
+            }
+
+            // In situations where you have too many includes, your queries end up being really complex, in these cases, if
+            // you still need to load all these objects ahead of time, you can use explicit loading, which is
+
+            //Explicit loading:
+
+            // getting rid of the Include is going to simplify the query, because EF is not going to join the Authors table with
+            // the courses table, 
+            var authorExplicit = context.Authors.Single(a => a.Id == 1);
+
+            // now we need to explicitly load the courses for this author, and this is why we call it explicit loading:
+            // There are 2 ways to do this:
+
+            // 1. MSDN way: using the Load method, which instructor doesn't recommend, since you need to remember a lot of
+            // methods to call, entry, collection, load, etc. But, there's another reason... this only works for SINGLE ENTRIES.
+            // If my query returns a list of authors, we cannot use this approach:
+            context.Entry(authorExplicit).Collection(a => a.Courses).Load();
+
+            // 2. The instructor's (MOSH) way:
+            context.Courses.Where(c => c.AuthorId == authorExplicit.Id).Load();
+
+            // Another benefit of explicit loading is that you apply filters to the related entities that you want to load:
+
+            // First, MDSN way: too noisy as you can see
+            context.Entry(authorExplicit).Collection(a => a.Courses).Query().Where(c => c.FullPrice == 0).Load();
+
+            // Mosh's way:
+            context.Courses.Where(c => c.AuthorId == authorExplicit.Id && c.FullPrice == 0).Load();
+
+            // Just remember the Load() method, you can make your queries as normal as usual, just for explicit loading you
+            // just need to add the Load() method at the end :D
+
+
+            // Another example:
+
+            // Imagine we wanna get all authors and their free courses
+            var authors = context.Authors.ToList();
+
+            // now to get the free courses for each author, we cannot use the MSDN way, because if I call context.Entry() I
+            // cannot pass the authors variable collection, cause' the entry method is used to reference only a single object
+            // so we need to use Mosh's way:
+
+            var authorIds = authors.Select(a => a.Id); // this returns an IEnumerable<int> with all the author Ids
+
+            context.Courses.Where(c => authorIds.Contains(c.AuthorId) && c.FullPrice == 0).Load(); // Sql will use the IN operator to select multiple courses
+        }
+
         static void Main(string[] args)
         {
             var context = new PlutoContext();
@@ -629,7 +697,8 @@ namespace Queries
             //IEnumerableVsIQueryable(context);
             //LazyLoading(context);
             //NPlusOneQueries(context);    
-            EagerLoading(context);
+            //EagerLoading(context);
+            ExplicitLoading(context);
         }
     }
 }
