@@ -686,10 +686,8 @@ namespace Queries
             context.Courses.Where(c => authorIds.Contains(c.AuthorId) && c.FullPrice == 0).Load(); // Sql will use the IN operator to select multiple courses
         }
 
-        static void Main(string[] args)
+        static void AddinObjectsToTheDB(PlutoContext context)
         {
-            var context = new PlutoContext();
-
             //LinqSintax(context);
             //ExtensionMethods(context);
             //AdditionalExtensionMethods(context);
@@ -698,7 +696,94 @@ namespace Queries
             //LazyLoading(context);
             //NPlusOneQueries(context);    
             //EagerLoading(context);
-            ExplicitLoading(context);
+            //ExplicitLoading(context);
+
+            // Adding objects to the database
+
+            var course = new Course // new course object to be added to the db
+            {
+                Name = "New Course",
+                Description = "New Course Description",
+                FullPrice = 19.95f,
+                Level = 1,
+                Author = new Author { Id = 1, Name = "Edgar Vargas" } // this create a new author object
+            };
+
+            //context.Courses.Add(course); // adding the course to the context, this doesn't save it to the database yet!!!
+
+            //context.SaveChanges(); // this saves the changes to the database, so now the course is added to the db
+
+            // The above creates a new Author object, this could lead to duplicated authors in the database, so we have two approaches to solve this:
+
+            // ----------------- 1. Bringin all of the authors from the database, and then check if the author already exists, if it does, we use that one:
+
+            var authors = context.Authors.ToList(); // bringing all authors from the database
+
+            var author = context.Authors.Local.Single(a => a.Id == 1); // getting the author with Id 1, this is the author we want to use which is in memory thanks
+                                                                       // to the previous query
+
+            var course2 = new Course // new course object to be added to the db
+            {
+                Name = "New Course",
+                Description = "New Course Description",
+                FullPrice = 19.95f,
+                Level = 1,
+                Author = author // this create a new author object
+            };
+
+            //context.Courses.Add(course2); // adding the course to the context, this doesn't save it to the database yet!!!
+            //context.SaveChanges(); // this saves the changes to the database, so now the course is added to the db
+
+            // This approach is more useful in WPF applications, where you have a lot of objects in memory, and you can bring all authors
+
+            // ----------------- 2. Using foreign key properties
+
+            // with this approach we don't need the "authors" or "author" objects we used before:
+
+            var course3 = new Course // new course object to be added to the db
+            {
+                Name = "New Course",
+                Description = "New Course Description",
+                FullPrice = 19.95f,
+                Level = 1,
+                AuthorId = 1 // more simple, we just set the AuthorId property to the Id of the author we want to use
+            };
+
+            // This second approach works well in web applications, because in web apps our context is short-lived, so we don't have objects hanging in the memory
+
+            // ----------------- 3. Using the Attach method
+
+            // There's a third approach, which is not used very often, but it's worth mentioning for some odd circumstances:
+
+            // Imagine we have an object that's not in our context, something like this:
+
+            var authorNew = new Author() { Id = 1, Name = "Mosh Hamedani" }; // this is an author object that is not in the context
+
+            context.Authors.Attach(authorNew);
+
+            var course4 = new Course
+            {
+                Name = "New Course",
+                Description = "New Course Description",
+                FullPrice = 19.95f,
+                Level = 1,
+                Author = authorNew // we use the navigation property to set the author
+            };
+
+            // Mosh doesn't recommend this approach, the problem with Attach() method or similar methods is that they make you too close to EF inner workings
+
+            // Final recommendations:
+
+            // - Use the two first approaches, depending on the type of application you're building:
+            //   - If you have an existing author in the context, simply get that, but you need to make sure the author (in this case) is in the context
+            //   - Otherwise, use the foreign key property to create the association between the course and the author (simpler and cleaner)
+        }
+
+        static void Main(string[] args)
+        {
+            var context = new PlutoContext(); 
+
+            
         }
     }
 }
