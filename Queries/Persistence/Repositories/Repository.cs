@@ -7,7 +7,7 @@ using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Queries.Persistence
+namespace Queries.Persistence.Repositories
 {
     // GENERIC implementation of IRepository interface
     public class Repository<TEntity>: IRepository<TEntity> where TEntity : class
