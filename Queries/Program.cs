@@ -1,12 +1,8 @@
-﻿using System;
+﻿using Queries.Persistence;
+using System;
 using System.Collections.Generic;
 using System.Data.Entity;
-using System.Data.Entity.Core.Common.CommandTrees;
 using System.Linq;
-using System.Reflection.Emit;
-using System.Runtime.Remoting.Contexts;
-using System.Threading;
-using System.Xml.Linq;
 
 namespace Queries
 {
@@ -952,6 +948,34 @@ namespace Queries
             //UpdatingObjectsInTheDB(context);
             //DeletingObjectsInTheDB(context);
             //ChangeTracker(context);
+
+            // Using repository and unit of work patterns
+
+            // using block is only for console applications, in WPF or ASP.NET applications we don't use it
+            using (var unitOfWork = new UnitOfWork(new PlutoContext()))
+            {
+                // Example 1: getting course with Id 1
+
+                // Instead of DBSet, the "unitOfWork" properties are repositories, unlike DBSet, they don't know anything about EF
+                // so, this decouples our application from EF, so if we want to change the ORM in the future, we can do it easily
+                var course1 = unitOfWork.Courses.Get(1);
+
+                // Example 2: all courses with their authors
+                var coursesAuthors = unitOfWork.Courses.GetCoursesWithAuthors(1, 4);
+
+                // Example 3: get and remove an author
+                var authorToRemove = unitOfWork.Authors.GetAuthorWithCourses(1);
+
+                // Delete the courses related to the author
+                unitOfWork.Courses.RemoveRange(authorToRemove.Courses);
+
+                // Now, we can remove the author itself
+                unitOfWork.Authors.Remove(authorToRemove);
+
+                // Finally, we save the changes to the database by completing our unit of work
+                unitOfWork.Complete(); // this will save all changes made to the context, so the author and its related courses are removed from the db
+            }
+
         }
     }
 }
