@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 
 namespace Queries.Migrations
 {
+    using Queries.Persistence;
     using System.Data.Entity.Migrations;
 
     internal sealed class Configuration : DbMigrationsConfiguration<PlutoContext>

@@ -17,8 +17,8 @@ namespace Queries.EntityConfigurations
             HasRequired(c => c.Author)
             .WithMany(a => a.Courses)
             .HasForeignKey(c => c.AuthorId)
-            .WillCascadeOnDelete(false);
-            
+            .WillCascadeOnDelete(false); // here we manually disabled/enabled the cascade delete behavior
+
             HasRequired(c => c.Cover)
                 .WithRequiredPrincipal(c => c.Course);
 

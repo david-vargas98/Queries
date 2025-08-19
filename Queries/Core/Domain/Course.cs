@@ -23,8 +23,12 @@ namespace Queries
 
         public int AuthorId { get; set; }
 
-        public virtual ICollection<Tag> Tags { get; set; }
+        public virtual ICollection<Tag> Tags { get; set; } // virtual enables lazy loading
 
         public Cover Cover { get; set; }
+        public bool IsBeginnerCourse 
+        { 
+            get { return Level == 1; } // this is a calculated property 
+        }
     }
 }
